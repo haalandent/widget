@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_navn">Haalandent widget</string>
+    <string name="widget_liste">Liste (Min dag, Familiens dag)</string>
+    <string name="widget_liste_beskrivelse">Dagens oppføringer fra en modul</string>
+</resources>

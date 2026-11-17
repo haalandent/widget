@@ -1,0 +1,56 @@
+name: Bygg
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bygg:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Bygg debug (sjekk av main)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: gradle --no-daemon :app:assembleDebug
+
+      - name: Signeringsnøkkel
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          B64: ${{ secrets.WIDGET_KEYSTORE_B64 }}
+        run: |
+          test -n "$B64" || { echo "::error::Mangler secret WIDGET_KEYSTORE_B64 (se README)"; exit 1; }
+          echo "$B64" | base64 -d > "$RUNNER_TEMP/widget.p12"
+          echo "WIDGET_KEYSTORE=$RUNNER_TEMP/widget.p12" >> "$GITHUB_ENV"
+
+      - name: Bygg signert release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          VERSJON: ${{ github.ref_name }}
+          WIDGET_KEYSTORE_PASSWORD: ${{ secrets.WIDGET_KEYSTORE_PASSWORD }}
+        run: |
+          gradle --no-daemon :app:assembleRelease
+          # Finnes ikke app-release.apk, ble den ikke signert -> feiler her
+          cp app/build/outputs/apk/release/app-release.apk "haalandent-widget-${VERSJON}.apk"
+          "$ANDROID_HOME"/build-tools/35.0.0/apksigner verify "haalandent-widget-${VERSJON}.apk" \
+            || ls "$ANDROID_HOME"/build-tools/
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: haalandent-widget-*.apk
