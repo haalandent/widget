@@ -38,6 +38,7 @@ class KonfigActivity : ComponentActivity() {
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
     private var valgt by mutableStateOf<Pair<Modul, JSONObject>?>(null)
     private val paramValg = mutableStateMapOf<String, String>()
+    private var form = "liste"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,12 +46,13 @@ class KonfigActivity : ComponentActivity() {
             AppWidgetManager.INVALID_APPWIDGET_ID) ?: AppWidgetManager.INVALID_APPWIDGET_ID
         setResult(RESULT_CANCELED, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId))
         if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
+        form = if (erMaanedWidget(this, widgetId)) "maned" else "liste"
         setContent { Tema { Skjerm() } }
     }
 
     private fun typerFor(m: Modul): List<JSONObject> =
         (0 until m.typer.length()).map { m.typer.getJSONObject(it) }
-            .filter { it.optString("form") == "liste" }
+            .filter { it.optString("form") == form }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
@@ -127,7 +129,7 @@ class KonfigActivity : ComponentActivity() {
                 it.remove(N.data)
                 it.remove(N.feil)
             }
-            ListeWidget().update(this@KonfigActivity, glanceId)
+            widgetFor(this@KonfigActivity, glanceId).update(this@KonfigActivity, glanceId)
             Oppdatering.startPeriodisk(this@KonfigActivity)
             Oppdatering.hentNaa(this@KonfigActivity)
             setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId))

@@ -3,4 +3,6 @@
     <string name="app_navn">Haalandent widget</string>
     <string name="widget_liste">Liste (Min dag, Familiens dag)</string>
     <string name="widget_liste_beskrivelse">Dagens oppføringer fra en modul</string>
+    <string name="widget_maned">Månedskalender</string>
+    <string name="widget_maned_beskrivelse">Måned med prikker per dag; trykk på en dag for listen</string>
 </resources>

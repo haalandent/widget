@@ -48,7 +48,6 @@ import androidx.glance.unit.ColorProvider
 import org.json.JSONObject
 import java.time.OffsetDateTime
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 class ListeWidgetMottaker : GlanceAppWidgetReceiver() {
     override val glanceAppWidget = ListeWidget()
@@ -78,45 +77,7 @@ class ListeWidget : GlanceAppWidget() {
     }
 }
 
-private data class Rad(
-    val start: OffsetDateTime?, val slutt: OffsetDateTime?, val heldag: Boolean,
-    val ikon: String?, val tekst: String, val undertekst: String?, val farge: Color?,
-    val ferdig: Boolean?, val url: String?, val handling: String?,
-)
-
-private fun JSONObject.str(n: String): String? = if (isNull(n)) null else optString(n).takeIf { it.isNotEmpty() }
-
-private fun tid(s: String?) = s?.let { runCatching { OffsetDateTime.parse(it) }.getOrNull() }
-
-private fun farge(s: String?): Color? = s?.let {
-    runCatching { Color(android.graphics.Color.parseColor(it)) }.getOrNull()
-}
-
-private fun rader(data: JSONObject): List<Rad> {
-    val a = data.optJSONArray("rader") ?: return emptyList()
-    return (0 until a.length()).map { i ->
-        val o = a.getJSONObject(i)
-        Rad(
-            start = tid(o.str("start")), slutt = tid(o.str("slutt")),
-            heldag = o.optBoolean("heldag"), ikon = o.str("ikon"),
-            tekst = o.optString("tekst"), undertekst = o.str("undertekst"),
-            farge = farge(o.str("farge")),
-            ferdig = if (o.isNull("ferdig") || !o.has("ferdig")) null else o.getBoolean("ferdig"),
-            url = o.str("url"),
-            handling = o.optJSONObject("handling")?.str("id"),
-        )
-    }
-}
-
-/** Kontrakten: skjul når slutt (ellers start) er passert og raden ikke venter på avkrysning. */
-private fun synlig(r: Rad, naa: OffsetDateTime): Boolean {
-    val grense = r.slutt ?: r.start ?: return true
-    return !(grense.isBefore(naa) && r.ferdig != false)
-}
-
-private val klokke = DateTimeFormatter.ofPattern("HH:mm")
-
-private fun visUrl(url: String) =
+fun visUrl(url: String) =
     actionStartActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
 
 @Composable
@@ -240,7 +201,7 @@ class KryssAv : ActionCallback {
             Api.handling(context, modul, handling)
         } catch (e: Exception) {
             updateAppWidgetState(context, glanceId) { it[N.feil] = e.message ?: "Feil" }
-            ListeWidget().update(context, glanceId)
+            widgetFor(context, glanceId).update(context, glanceId)
             return
         }
         Oppdatering.hentWidget(context, glanceId)

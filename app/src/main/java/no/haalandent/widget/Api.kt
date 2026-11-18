@@ -100,8 +100,10 @@ object Demo {
     fun typer(): JSONArray = JSONArray()
         .put(JSONObject().put("id", "min-dag").put("tittel", "Min dag").put("form", "liste").put("param", JSONArray()))
         .put(JSONObject().put("id", "familie").put("tittel", "Familiens dag").put("form", "liste").put("param", JSONArray()))
+        .put(JSONObject().put("id", "maned").put("tittel", "Månedskalender").put("form", "maned").put("param", JSONArray()))
 
     fun hent(c: Context, type: String): JSONObject {
+        if (type == "maned") return maned()
         val sone = ZoneId.systemDefault()
         val i_dag = LocalDate.now(sone)
         val fmt = DateTimeFormatter.ISO_OFFSET_DATE_TIME
@@ -137,6 +139,26 @@ object Demo {
             .put("oppdatert", naa.format(fmt))
             .put("gyldig_til", naa.plusHours(1).format(fmt))
             .put("rader", JSONArray(sortert))
+    }
+
+    private fun maned(): JSONObject {
+        val idag = LocalDate.now()
+        val farger = listOf("#4A90D9", "#E67E22", "#27AE60", "#C0392B")
+        val dager = JSONObject()
+        for (d in 1..idag.lengthOfMonth()) {
+            val n = (d * 7) % 5 // 0–4 prikker, fast mønster
+            if (n == 0) continue
+            val a = JSONArray()
+            for (i in 0 until n.coerceAtMost(4)) a.put(JSONObject().put("farge", farger[i]))
+            dager.put(idag.withDayOfMonth(d).toString(), a)
+        }
+        return JSONObject()
+            .put("tittel", "Kalender (demo)").put("url", JSONObject.NULL)
+            .put("maned", idag.toString().substring(0, 7))
+            .put("oppdatert", ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+            .put("gyldig_til", ZonedDateTime.now().plusHours(1).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+            .put("dager", dager)
+            .put("dag", "/api/widget/v1/dag?dato={dato}")
     }
 
     fun handling(c: Context, id: String): JSONObject {

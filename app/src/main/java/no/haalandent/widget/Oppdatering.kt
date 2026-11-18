@@ -53,7 +53,7 @@ object Oppdatering {
         } catch (e: Exception) {
             settFeil(c, id, e.message ?: "Feil")
         }
-        ListeWidget().update(c, id)
+        widgetFor(c, id).update(c, id)
     }
 
     private suspend fun settFeil(c: Context, id: GlanceId, melding: String?) {
@@ -64,11 +64,12 @@ object Oppdatering {
                 it[N.feil] = melding
             }
         }
-        ListeWidget().update(c, id)
+        widgetFor(c, id).update(c, id)
     }
 
     suspend fun hentAlle(c: Context) {
-        val ider = GlanceAppWidgetManager(c).getGlanceIds(ListeWidget::class.java)
+        val m = GlanceAppWidgetManager(c)
+        val ider = m.getGlanceIds(ListeWidget::class.java) + m.getGlanceIds(MaanedWidget::class.java)
         for (id in ider) hentWidget(c, id)
         planleggGyldigTil(c, ider)
     }
