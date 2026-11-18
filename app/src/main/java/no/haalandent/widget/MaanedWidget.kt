@@ -27,6 +27,7 @@ import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
@@ -68,6 +69,8 @@ class MaanedWidget : GlanceAppWidget() {
     }
 }
 
+private val linjeFarge = androidx.glance.color.ColorProvider(
+    day = Color(0xFFC9CED6), night = Color(0xFF3A3F47))
 private val ukedager = listOf("M", "T", "O", "T", "F", "L", "S")
 private val maanedNavn = DateTimeFormatter.ofPattern("LLLL yyyy", Locale.forLanguageTag("nb"))
 
@@ -138,13 +141,18 @@ private fun MaanedInnhold(c: Context, p: Preferences, appWidgetId: Int) {
         val forskyvning = forste.dayOfWeek.value - 1
         val antall = maaned.lengthOfMonth()
         val uker = (forskyvning + antall + 6) / 7
-        Column(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
+        // Linjene er bakgrunnen som skinner gjennom 1 dp mellomrom mellom rutene
+        Column(modifier = GlanceModifier.fillMaxWidth().defaultWeight().cornerRadius(6.dp)
+            .background(linjeFarge).padding(0.5.dp)) {
             for (u in 0 until uker) {
                 Row(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
                     for (k in 0 until 7) {
                         val nr = u * 7 + k - forskyvning + 1
                         if (nr < 1 || nr > antall) {
-                            Box(modifier = GlanceModifier.defaultWeight()) {}
+                            Box(modifier = GlanceModifier.defaultWeight().fillMaxHeight().padding(0.5.dp)) {
+                                Box(modifier = GlanceModifier.fillMaxSize()
+                                    .background(GlanceTheme.colors.surfaceVariant)) {}
+                            }
                         } else {
                             val dato = maaned.atDay(nr)
                             DagCelle(c, dato, dato == idag, dager, dagSti, modulId, appWidgetId,
@@ -172,10 +180,12 @@ private fun DagCelle(
             .putExtra(DagActivity.DATO, iso)
             // unik data per celle, ellers gjenbrukes samme PendingIntent
             .setData(Uri.parse("widget://dag/$appWidgetId/$iso"))
-        modifier.clickable(actionStartActivity(intent))
-    } else modifier
+        GlanceModifier.clickable(actionStartActivity(intent))
+    } else GlanceModifier
 
-    Column(modifier = klikk.padding(1.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Box(modifier = modifier.fillMaxHeight().padding(0.5.dp)) {
+    Column(modifier = klikk.fillMaxSize().background(GlanceTheme.colors.surface).padding(top = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             dato.dayOfMonth.toString(),
             modifier = if (idag) GlanceModifier.width(22.dp).cornerRadius(11.dp)
@@ -195,5 +205,6 @@ private fun DagCelle(
                 }
             }
         }
+    }
     }
 }
