@@ -49,10 +49,17 @@ fun synlig(r: Rad, naa: OffsetDateTime): Boolean {
     return !(grense.isBefore(naa) && r.ferdig != false)
 }
 
-/** Hvilken widget-klasse en Glance-id hører til (liste eller måned). */
-fun erMaanedWidget(c: Context, appWidgetId: Int): Boolean =
-    AppWidgetManager.getInstance(c).getAppWidgetInfo(appWidgetId)?.provider?.className ==
-        MaanedWidgetMottaker::class.java.name
+/** Hvilken form en widget har, ut fra mottakerklassen. */
+fun formFor(c: Context, appWidgetId: Int): String =
+    when (AppWidgetManager.getInstance(c).getAppWidgetInfo(appWidgetId)?.provider?.className) {
+        MaanedWidgetMottaker::class.java.name -> "maned"
+        KnappWidgetMottaker::class.java.name -> "knapper"
+        else -> "liste"
+    }
 
 fun widgetFor(c: Context, id: GlanceId): GlanceAppWidget =
-    if (erMaanedWidget(c, GlanceAppWidgetManager(c).getAppWidgetId(id))) MaanedWidget() else ListeWidget()
+    when (formFor(c, GlanceAppWidgetManager(c).getAppWidgetId(id))) {
+        "maned" -> MaanedWidget()
+        "knapper" -> KnappWidget()
+        else -> ListeWidget()
+    }

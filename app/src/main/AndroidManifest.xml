@@ -56,6 +56,18 @@
         </receiver>
 
         <receiver
+            android:name=".KnappWidgetMottaker"
+            android:exported="true"
+            android:label="@string/widget_knapper">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/knapp_widget" />
+        </receiver>
+
+        <receiver
             android:name=".ListeWidgetMottaker"
             android:exported="true"
             android:label="@string/widget_liste">

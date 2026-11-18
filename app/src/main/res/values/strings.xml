@@ -5,4 +5,6 @@
     <string name="widget_liste_beskrivelse">Dagens oppføringer fra en modul</string>
     <string name="widget_maned">Månedskalender</string>
     <string name="widget_maned_beskrivelse">Måned med prikker per dag; trykk på en dag for listen</string>
+    <string name="widget_knapper">Knapper (f.eks. søvn)</string>
+    <string name="widget_knapper_beskrivelse">Status og store knapper for rask registrering</string>
 </resources>

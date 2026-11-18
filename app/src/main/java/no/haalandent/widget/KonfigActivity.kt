@@ -46,7 +46,7 @@ class KonfigActivity : ComponentActivity() {
             AppWidgetManager.INVALID_APPWIDGET_ID) ?: AppWidgetManager.INVALID_APPWIDGET_ID
         setResult(RESULT_CANCELED, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId))
         if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
-        form = if (erMaanedWidget(this, widgetId)) "maned" else "liste"
+        form = formFor(this, widgetId)
         setContent { Tema { Skjerm() } }
     }
 

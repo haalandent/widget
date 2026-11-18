@@ -30,12 +30,14 @@ object N {
     val data = stringPreferencesKey("data")
     val feil = stringPreferencesKey("feil")
     val hentet = longPreferencesKey("hentet")
+    val melding = stringPreferencesKey("melding")   // fra siste handling, vises til neste henting
+    val venter = stringPreferencesKey("venter")     // "<knapp-id>|<epoch ms>" mens et kall pågår
 }
 
 object Oppdatering {
 
     /** Henter data for én widget og tegner den på nytt. */
-    suspend fun hentWidget(c: Context, id: GlanceId) {
+    suspend fun hentWidget(c: Context, id: GlanceId, beholdMelding: Boolean = false) {
         val p: Preferences = getAppWidgetState(c, PreferencesGlanceStateDefinition, id)
         val modul = Lager.modul(c, p[N.modul])
         val type = p[N.type]
@@ -48,6 +50,7 @@ object Oppdatering {
             updateAppWidgetState(c, id) {
                 it[N.data] = data.toString()
                 it.remove(N.feil)
+                if (!beholdMelding) it.remove(N.melding)
                 it[N.hentet] = System.currentTimeMillis()
             }
         } catch (e: Exception) {
@@ -69,9 +72,17 @@ object Oppdatering {
 
     suspend fun hentAlle(c: Context) {
         val m = GlanceAppWidgetManager(c)
-        val ider = m.getGlanceIds(ListeWidget::class.java) + m.getGlanceIds(MaanedWidget::class.java)
+        val ider = m.getGlanceIds(ListeWidget::class.java) + m.getGlanceIds(MaanedWidget::class.java) +
+            m.getGlanceIds(KnappWidget::class.java)
         for (id in ider) hentWidget(c, id)
         planleggGyldigTil(c, ider)
+    }
+
+    /** Planlegg neste henting ut fra gyldig_til uten å hente noe nå. */
+    suspend fun planlegg(c: Context) {
+        val m = GlanceAppWidgetManager(c)
+        planleggGyldigTil(c, m.getGlanceIds(ListeWidget::class.java) +
+            m.getGlanceIds(MaanedWidget::class.java) + m.getGlanceIds(KnappWidget::class.java))
     }
 
     /** Neste henting senest ved laveste gyldig_til (minst 1 min fram). */

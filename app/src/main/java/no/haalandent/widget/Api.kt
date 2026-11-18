@@ -101,9 +101,11 @@ object Demo {
         .put(JSONObject().put("id", "min-dag").put("tittel", "Min dag").put("form", "liste").put("param", JSONArray()))
         .put(JSONObject().put("id", "familie").put("tittel", "Familiens dag").put("form", "liste").put("param", JSONArray()))
         .put(JSONObject().put("id", "maned").put("tittel", "Månedskalender").put("form", "maned").put("param", JSONArray()))
+        .put(JSONObject().put("id", "sovn").put("tittel", "Søvn").put("form", "knapper").put("param", JSONArray()))
 
     fun hent(c: Context, type: String): JSONObject {
         if (type == "maned") return maned()
+        if (type == "sovn") return DemoSovn.hent(c)
         val sone = ZoneId.systemDefault()
         val i_dag = LocalDate.now(sone)
         val fmt = DateTimeFormatter.ISO_OFFSET_DATE_TIME
@@ -162,10 +164,89 @@ object Demo {
     }
 
     fun handling(c: Context, id: String): JSONObject {
+        if (id.startsWith("sovn|")) return DemoSovn.handling(c, id)
         val s = Lager.demoFerdig(c).toMutableSet()
         val ny = s.add(id)
         if (!ny) s.remove(id)
         Lager.settDemoFerdig(c, s)
         return JSONObject().put("melding", if (ny) "Krysset av" else "Angret").put("oppdater", true)
+    }
+}
+
+/** Demo-søvn: Ingen natt -> Lagt -> Sover <-> Våken -> Stått opp, med «Angre» i 2 min. */
+object DemoSovn {
+    private const val FIL = "demo_sovn"
+    private val fmt = DateTimeFormatter.ofPattern("HH:mm")
+
+    private fun p(c: Context) = c.getSharedPreferences(FIL, Context.MODE_PRIVATE)
+
+    private val knappTekst = mapOf(
+        "lagt" to ("Lagt" to "🛏"), "sovnet" to ("Sovnet" to "😴"), "vaknet" to ("Våknet" to "👀"),
+        "sovnet_igjen" to ("Sovnet igjen" to "😴"), "opp" to ("Stått opp" to "☀"), "angre" to ("Angre" to "↩"),
+    )
+
+    fun hent(c: Context): JSONObject {
+        val pr = p(c)
+        val tilstand = pr.getString("tilstand", "ingen")!!
+        val siden = pr.getString("siden", null)
+        val angreTil = pr.getLong("angre_til", 0L)
+        val naa = System.currentTimeMillis()
+        val (ikon, tekst) = when (tilstand) {
+            "lagt" -> "🛏" to "Lagt"
+            "sover" -> "🌙" to "Sover"
+            "vaaken" -> "👀" to "Våken"
+            else -> "☀" to "Ingen natt"
+        }
+        val valg = when (tilstand) {
+            "lagt" -> listOf("sovnet", "opp")
+            "sover" -> listOf("vaknet", "opp")
+            "vaaken" -> listOf("sovnet_igjen", "opp")
+            else -> listOf("lagt")
+        } + (if (naa < angreTil) listOf("angre") else emptyList())
+        val knapper = JSONArray()
+        valg.forEachIndexed { i, v ->
+            val (t, ik) = knappTekst.getValue(v)
+            knapper.put(JSONObject().put("id", "sovn|$tilstand|$v").put("tittel", t).put("ikon", ik)
+                .put("hoved", i == 0))
+        }
+        val linjer = JSONArray()
+        JSONArray(pr.getString("linjer", "[]")).let { a ->
+            for (i in maxOf(0, a.length() - 4) until a.length()) linjer.put(JSONObject().put("tekst", a.getString(i)))
+        }
+        val gyldig = if (naa < angreTil) ZonedDateTime.now().plusSeconds((angreTil - naa) / 1000 + 1)
+            else ZonedDateTime.now().plusHours(1)
+        return JSONObject()
+            .put("tittel", "Søvn (demo)").put("url", JSONObject.NULL)
+            .put("oppdatert", ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+            .put("gyldig_til", gyldig.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+            .put("status", JSONObject().put("ikon", ikon).put("tekst", tekst)
+                .put("undertekst", if (siden != null && tilstand != "ingen") "siden $siden" else JSONObject.NULL)
+                .put("farge", JSONObject.NULL))
+            .put("linjer", linjer)
+            .put("knapper", knapper)
+    }
+
+    fun handling(c: Context, id: String): JSONObject {
+        val (_, fra, valg) = id.split("|").let { Triple(it[0], it[1], it[2]) }
+        val pr = p(c)
+        val tilstand = pr.getString("tilstand", "ingen")!!
+        if (fra != tilstand) return JSONObject().put("melding", "Allerede registrert").put("oppdater", true)
+        val kl = LocalTime.now().format(fmt)
+        val linjer = JSONArray(pr.getString("linjer", "[]"))
+        val e = pr.edit()
+        if (valg == "angre") {
+            e.putString("tilstand", pr.getString("forrige", "ingen"))
+                .putString("siden", pr.getString("forrige_siden", null))
+                .putLong("angre_til", 0L)
+            if (linjer.length() > 0) linjer.remove(linjer.length() - 1)
+        } else {
+            val ny = when (valg) { "lagt" -> "lagt"; "sovnet", "sovnet_igjen" -> "sover"; "vaknet" -> "vaaken"; else -> "ingen" }
+            e.putString("forrige", tilstand).putString("forrige_siden", pr.getString("siden", null))
+                .putString("tilstand", ny).putString("siden", kl)
+                .putLong("angre_til", System.currentTimeMillis() + 120_000L)
+            linjer.put("${knappTekst.getValue(valg).first} $kl")
+        }
+        e.putString("linjer", linjer.toString()).apply()
+        return JSONObject().put("melding", if (valg == "angre") "Angret" else "Registrert $kl").put("oppdater", true)
     }
 }
