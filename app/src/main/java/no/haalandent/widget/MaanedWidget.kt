@@ -201,11 +201,20 @@ private fun DagCelle(
             ),
         )
         if (prikker != null && prikker.length() > 0) {
-            Row(modifier = GlanceModifier.padding(top = 1.dp)) {
-                for (i in 0 until minOf(4, prikker.length())) {
-                    val f = farge(prikker.optJSONObject(i)?.str("farge")) ?: Color.Gray
-                    Box(modifier = GlanceModifier.size(5.dp).cornerRadius(3.dp).background(f)) {}
-                    if (i < minOf(4, prikker.length()) - 1) Spacer(GlanceModifier.width(2.dp))
+            // Inntil 4 store prikker i 2×2 (én per person)
+            val farger = (0 until minOf(4, prikker.length())).map {
+                farge(prikker.optJSONObject(it)?.str("farge")) ?: Color.Gray
+            }
+            Column(modifier = GlanceModifier.padding(top = 3.dp),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                farger.chunked(2).forEachIndexed { r, par ->
+                    if (r > 0) Spacer(GlanceModifier.height(3.dp))
+                    Row {
+                        par.forEachIndexed { i, f ->
+                            if (i > 0) Spacer(GlanceModifier.width(3.dp))
+                            Box(modifier = GlanceModifier.size(11.dp).cornerRadius(6.dp).background(f)) {}
+                        }
+                    }
                 }
             }
         }
