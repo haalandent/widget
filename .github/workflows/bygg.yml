@@ -1,9 +1,10 @@
 name: Bygg
 
+# Push til main: leser VERSJON. Finnes ikke tag v<VERSJON>, bygges signert release-APK
+# og GitHub Release (med tag) lages. Ellers bare debug-bygg som kompileringssjekk.
 on:
   push:
     branches: [main]
-    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -14,6 +15,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Versjon
+        id: v
+        run: |
+          V="$(tr -d '[:space:]' < VERSJON)"
+          echo "versjon=$V" >> "$GITHUB_OUTPUT"
+          if git rev-parse -q --verify "refs/tags/v$V" >/dev/null; then
+            echo "ny=nei" >> "$GITHUB_OUTPUT"; echo "v$V finnes, bare sjekk-bygg"
+          else
+            echo "ny=ja" >> "$GITHUB_OUTPUT"; echo "Ny versjon v$V -> release"
+          fi
 
       - uses: actions/setup-java@v4
         with:
@@ -24,33 +38,36 @@ jobs:
         with:
           gradle-version: '8.11.1'
 
-      - name: Bygg debug (sjekk av main)
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+      - name: Bygg debug (sjekk)
+        if: steps.v.outputs.ny == 'nei'
         run: gradle --no-daemon :app:assembleDebug
 
       - name: Signeringsnøkkel
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: steps.v.outputs.ny == 'ja'
         env:
           B64: ${{ secrets.WIDGET_KEYSTORE_B64 }}
+          PASSORD: ${{ secrets.WIDGET_KEYSTORE_PASSWORD }}
         run: |
           test -n "$B64" || { echo "::error::Mangler secret WIDGET_KEYSTORE_B64 (se README)"; exit 1; }
           echo "$B64" | base64 -d > "$RUNNER_TEMP/widget.p12"
+          openssl pkcs12 -in "$RUNNER_TEMP/widget.p12" -passin env:PASSORD -noout \
+            || { echo "::error::Kan ikke åpne nøkkelfila: feil WIDGET_KEYSTORE_PASSWORD eller ødelagt WIDGET_KEYSTORE_B64"; exit 1; }
           echo "WIDGET_KEYSTORE=$RUNNER_TEMP/widget.p12" >> "$GITHUB_ENV"
 
       - name: Bygg signert release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: steps.v.outputs.ny == 'ja'
         env:
-          VERSJON: ${{ github.ref_name }}
+          VERSJON: ${{ steps.v.outputs.versjon }}
           WIDGET_KEYSTORE_PASSWORD: ${{ secrets.WIDGET_KEYSTORE_PASSWORD }}
         run: |
           gradle --no-daemon :app:assembleRelease
           # Finnes ikke app-release.apk, ble den ikke signert -> feiler her
           cp app/build/outputs/apk/release/app-release.apk "haalandent-widget-${VERSJON}.apk"
-          "$ANDROID_HOME"/build-tools/35.0.0/apksigner verify "haalandent-widget-${VERSJON}.apk" \
-            || ls "$ANDROID_HOME"/build-tools/
 
       - name: Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: steps.v.outputs.ny == 'ja'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ steps.v.outputs.versjon }}
+          target_commitish: ${{ github.sha }}
           files: haalandent-widget-*.apk

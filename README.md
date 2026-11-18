@@ -14,9 +14,10 @@ avsnitt 9 i prosjektet). Nye moduler krever ingen endring her, bare at modulen l
 
 ## Bygg og utgivelse
 
-- Push til `main`: GitHub Actions bygger debug (kompileringssjekk).
-- Tag `vX.Y.Z`: Actions bygger signert release-APK og legger den på GitHub Releases.
-  `versionCode = X*10000 + Y*100 + Z`. Obtainium henter derfra.
+- Versjonen står i `VERSJON` (`X.Y.Z`). Push til `main`: finnes ikke tag `vX.Y.Z`, bygger
+  Actions signert release-APK og lager tag + GitHub Release. Ellers bare debug-bygg (sjekk).
+  `versionCode = X*10000 + Y*100 + Z`. Obtainium henter fra Releases.
+- Ny utgivelse = øk `VERSJON` og push.
 
 ## Signeringsnøkkel (én gang, lokalt hos Karl)
 
