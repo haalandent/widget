@@ -32,7 +32,7 @@ object Api {
         val token = svar.getString("token")
         val rot = kall("GET", "$base$STI", token, null)
         return Lager.leggTil(c, base, rot.optString("tittel", svar.optString("tittel", base)),
-            token, rot.optJSONArray("typer") ?: JSONArray())
+            token, rot.optJSONArray("typer") ?: JSONArray(), rot.optJSONObject("ny"))
     }
 
     /** Henter typer på nytt (f.eks. etter at modulen har fått nye). */
@@ -40,7 +40,7 @@ object Api {
         if (m.erDemo) return
         val rot = kall("GET", "${m.url}$STI", tokenFor(c, m), null)
         Lager.leggTil(c, m.url, rot.optString("tittel", m.tittel), Lager.token(m),
-            rot.optJSONArray("typer") ?: JSONArray())
+            rot.optJSONArray("typer") ?: JSONArray(), rot.optJSONObject("ny"))
     }
 
     suspend fun hent(c: Context, m: Modul, type: String, param: String): JSONObject {

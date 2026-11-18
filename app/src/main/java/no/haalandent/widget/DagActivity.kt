@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -91,6 +92,7 @@ class DagActivity : ComponentActivity() {
     private fun kryss(handling: String) {
         val m = modul ?: return
         arbeider = true
+        data?.let { data = JSONObject(markerFerdig(it.toString(), handling)) } // vis avkrysset straks
         lifecycleScope.launch {
             try {
                 Api.handling(this@DagActivity, m, handling)
@@ -98,7 +100,7 @@ class DagActivity : ComponentActivity() {
                 hent()
             } catch (e: Exception) {
                 melding = e.message ?: "Feil"
-                arbeider = false
+                hent() // rull tilbake
             }
         }
     }
@@ -131,7 +133,13 @@ class DagActivity : ComponentActivity() {
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End) {
                     val url = d?.str("url")
                         ?: liste_url(d)
-                    if (url != null) TextButton(onClick = { aapne(url) }) { Text("Åpne i webappen") }
+                    val ny = modul?.ny
+                    val nyUrl = ny?.str("url")
+                    val dato = intent.getStringExtra(DATO) ?: ""
+                    if (nyUrl != null) TextButton(onClick = { aapne(nyUrl.replace("{dato}", dato)) }) {
+                        Text("＋ " + (ny?.str("tittel") ?: "Ny"))
+                    }
+                    if (url != null) TextButton(onClick = { aapne(url) }) { Text("Åpne") }
                     TextButton(onClick = { finish() }) { Text("Lukk") }
                 }
             }
@@ -155,11 +163,16 @@ class DagActivity : ComponentActivity() {
                     .background(r.farge ?: Color.Gray, RoundedCornerShape(2.dp))
             )
             Spacer(Modifier.width(8.dp))
+            val lokal = r.start?.atZoneSameInstant(ZoneId.systemDefault())
             Text(
-                if (r.heldag) "Hele dagen"
-                else r.start?.atZoneSameInstant(ZoneId.systemDefault())?.format(klokke) ?: "",
+                when {
+                    r.heldag -> "Hele dagen"
+                    r.forfalt -> "⏰ " + (lokal?.format(datoKort) ?: "")
+                    else -> lokal?.format(klokke) ?: ""
+                },
                 modifier = Modifier.width(52.dp),
                 style = MaterialTheme.typography.bodySmall,
+                color = if (r.forfalt) varselFarge else Color.Unspecified,
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -167,7 +180,14 @@ class DagActivity : ComponentActivity() {
                     style = MaterialTheme.typography.bodyLarge,
                     textDecoration = if (ferdig) TextDecoration.LineThrough else null,
                 )
-                r.undertekst?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                r.steg?.let { st ->
+                    Text("▸ ${st.tekst}" + if (st.antall > 1) "  ${st.nr}/${st.antall}" else "",
+                        style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                }
+                r.undertekst?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall,
+                        color = if (r.forfalt) varselFarge else Color.Unspecified)
+                }
             }
             if (r.ferdig != null) {
                 Checkbox(

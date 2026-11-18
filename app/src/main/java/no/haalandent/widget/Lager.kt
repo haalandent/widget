@@ -20,12 +20,14 @@ data class Modul(
     val tittel: String,
     val tokenKryptert: String?,
     val typer: JSONArray,
+    val ny: JSONObject? = null,   // {tittel, url med {dato}} fra roten, valgfri
 ) {
     val erDemo get() = url == DEMO_URL
 
     fun tilJson() = JSONObject()
         .put("id", id).put("url", url).put("tittel", tittel)
         .put("token", tokenKryptert ?: JSONObject.NULL).put("typer", typer)
+        .put("ny", ny ?: JSONObject.NULL)
 
     companion object {
         fun fraJson(o: JSONObject) = Modul(
@@ -34,6 +36,7 @@ data class Modul(
             tittel = o.optString("tittel", o.getString("url")),
             tokenKryptert = o.optString("token").takeIf { it.isNotEmpty() && it != "null" },
             typer = o.optJSONArray("typer") ?: JSONArray(),
+            ny = o.optJSONObject("ny"),
         )
     }
 }
@@ -61,12 +64,13 @@ object Lager {
     }
 
     /** Legger til eller erstatter (samme url). Returnerer modulens id. */
-    fun leggTil(c: Context, url: String, tittel: String, token: String?, typer: JSONArray): String {
+    fun leggTil(c: Context, url: String, tittel: String, token: String?, typer: JSONArray,
+                ny: JSONObject? = null): String {
         val liste = moduler(c).toMutableList()
         val gammel = liste.firstOrNull { it.url == url }
         val id = gammel?.id ?: UUID.randomUUID().toString()
         liste.removeAll { it.url == url }
-        liste.add(Modul(id, url, tittel, token?.let { krypter(it) }, typer))
+        liste.add(Modul(id, url, tittel, token?.let { krypter(it) }, typer, ny))
         lagre(c, liste)
         return id
     }

@@ -71,6 +71,10 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         moduler = Lager.moduler(this)
         Oppdatering.hentNaa(this)
+        lifecycleScope.launch {
+            for (m in Lager.moduler(this@MainActivity)) runCatching { Api.oppdaterTyper(this@MainActivity, m) }
+            moduler = Lager.moduler(this@MainActivity)
+        }
     }
 
     /** haalandent-widget://legg-til?url=...&kode=wpk_... */

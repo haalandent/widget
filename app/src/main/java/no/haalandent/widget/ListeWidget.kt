@@ -152,10 +152,15 @@ private fun RadVisning(r: Rad, tekstFarge: ColorProvider, svak: ColorProvider) {
                 .background(r.farge ?: Color.Gray)
         ) {}
         Spacer(GlanceModifier.width(8.dp))
+        val lokal = r.start?.atZoneSameInstant(ZoneId.systemDefault())
         Text(
-            if (r.heldag) "Hele\ndagen" else r.start?.atZoneSameInstant(ZoneId.systemDefault())?.format(klokke) ?: "",
+            when {
+                r.heldag -> "Hele\ndagen"
+                r.forfalt -> "⏰\n" + (lokal?.format(datoKort) ?: "")
+                else -> lokal?.format(klokke) ?: ""
+            },
             modifier = GlanceModifier.width(44.dp),
-            style = TextStyle(color = svak, fontSize = 12.sp),
+            style = TextStyle(color = if (r.forfalt) ColorProvider(varselFarge) else svak, fontSize = 12.sp),
             maxLines = 2,
         )
         Column(modifier = GlanceModifier.defaultWeight()) {
@@ -167,8 +172,16 @@ private fun RadVisning(r: Rad, tekstFarge: ColorProvider, svak: ColorProvider) {
                 ),
                 maxLines = 1,
             )
+            if (r.steg != null) {
+                Text(
+                    "▸ ${r.steg.tekst}" + if (r.steg.antall > 1) "  ${r.steg.nr}/${r.steg.antall}" else "",
+                    style = TextStyle(color = tekstFarge, fontSize = 13.sp, fontWeight = FontWeight.Bold),
+                    maxLines = 1,
+                )
+            }
             if (r.undertekst != null) {
-                Text(r.undertekst, style = TextStyle(color = svak, fontSize = 12.sp), maxLines = 1)
+                Text(r.undertekst, style = TextStyle(
+                    color = if (r.forfalt) ColorProvider(varselFarge) else svak, fontSize = 12.sp), maxLines = 1)
             }
         }
         if (r.ferdig != null) {
@@ -197,9 +210,16 @@ class KryssAv : ActionCallback {
         val handling = parameters[handlingKey] ?: return
         val p = getAppWidgetState<Preferences>(context, PreferencesGlanceStateDefinition, glanceId)
         val modul = Lager.modul(context, p[N.modul]) ?: return
+        // Vis avkrysset med en gang
+        p[N.data]?.let { d ->
+            updateAppWidgetState(context, glanceId) { it[N.data] = markerFerdig(d, handling) }
+            widgetFor(context, glanceId).update(context, glanceId)
+        }
         try {
             Api.handling(context, modul, handling)
         } catch (e: Exception) {
+            updateAppWidgetState(context, glanceId) { it[N.feil] = e.message ?: "Feil" }
+            Oppdatering.hentWidget(context, glanceId) // rull tilbake den optimistiske avkrysningen
             updateAppWidgetState(context, glanceId) { it[N.feil] = e.message ?: "Feil" }
             widgetFor(context, glanceId).update(context, glanceId)
             return

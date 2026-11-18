@@ -15,7 +15,28 @@ data class Rad(
     val start: OffsetDateTime?, val slutt: OffsetDateTime?, val heldag: Boolean,
     val ikon: String?, val tekst: String, val undertekst: String?, val farge: Color?,
     val ferdig: Boolean?, val url: String?, val handling: String?,
+    val steg: Steg? = null, val forfalt: Boolean = false,
 )
+
+/** Gjeldende steg på et gjøremål; `ferdig`/`handling` på raden gjelder da dette steget. */
+data class Steg(val tekst: String, val nr: Int, val antall: Int, val gjort: Boolean)
+
+val varselFarge = Color(0xFFE5534B)
+val datoKort: DateTimeFormatter = DateTimeFormatter.ofPattern("d.M")
+
+/** Optimistisk avkrysning: marker raden med denne handlingen som ferdig i lagret JSON. */
+fun markerFerdig(data: String, handling: String): String = runCatching {
+    val o = JSONObject(data)
+    val a = o.optJSONArray("rader") ?: return data
+    for (i in 0 until a.length()) {
+        val r = a.getJSONObject(i)
+        if (r.optJSONObject("handling")?.optString("id") == handling) {
+            r.put("ferdig", true)
+            r.optJSONObject("steg")?.put("gjort", true)
+        }
+    }
+    o.toString()
+}.getOrDefault(data)
 
 fun JSONObject.str(n: String): String? = if (isNull(n)) null else optString(n).takeIf { it.isNotEmpty() }
 
@@ -39,6 +60,10 @@ fun rader(data: JSONObject): List<Rad> {
             ferdig = if (!o.has("ferdig") || o.isNull("ferdig")) null else o.getBoolean("ferdig"),
             url = o.str("url"),
             handling = o.optJSONObject("handling")?.str("id"),
+            steg = o.optJSONObject("steg")?.let { st ->
+                Steg(st.optString("tekst"), st.optInt("nr"), st.optInt("antall"), st.optBoolean("gjort"))
+            },
+            forfalt = o.optBoolean("forfalt"),
         )
     }
 }
