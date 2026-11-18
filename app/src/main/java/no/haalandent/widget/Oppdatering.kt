@@ -47,6 +47,7 @@ object Oppdatering {
         }
         try {
             val data = Api.hent(c, modul, type, p[N.param] ?: "")
+            Bilder.forhandsHent(c, modul, data)
             updateAppWidgetState(c, id) {
                 it[N.data] = data.toString()
                 it.remove(N.feil)

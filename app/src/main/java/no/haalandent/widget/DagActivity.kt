@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,10 +33,12 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -80,7 +84,9 @@ class DagActivity : ComponentActivity() {
         arbeider = true
         lifecycleScope.launch {
             try {
-                data = Api.hentSti(this@DagActivity, m, sti)
+                val d = Api.hentSti(this@DagActivity, m, sti)
+                Bilder.forhandsHent(this@DagActivity, m, d)
+                data = d
                 melding = null
             } catch (e: Exception) {
                 melding = e.message ?: "Feil"
@@ -158,11 +164,17 @@ class DagActivity : ComponentActivity() {
                 .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                Modifier.width(4.dp).height(32.dp)
-                    .background(r.farge ?: Color.Gray, RoundedCornerShape(2.dp))
-            )
-            Spacer(Modifier.width(8.dp))
+            val bilde = remember(r.bilde) { Bilder.lokal(this@DagActivity, modul, r.bilde) }
+            if (bilde != null) {
+                Image(bilde.asImageBitmap(), contentDescription = null, modifier = Modifier.size(32.dp))
+                Spacer(Modifier.width(8.dp))
+            } else {
+                Box(
+                    Modifier.width(4.dp).height(32.dp)
+                        .background(r.farge ?: Color.Gray, RoundedCornerShape(2.dp))
+                )
+                Spacer(Modifier.width(8.dp))
+            }
             val lokal = r.start?.atZoneSameInstant(ZoneId.systemDefault())
             Text(
                 when {

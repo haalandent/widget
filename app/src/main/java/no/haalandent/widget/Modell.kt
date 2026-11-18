@@ -16,6 +16,7 @@ data class Rad(
     val ikon: String?, val tekst: String, val undertekst: String?, val farge: Color?,
     val ferdig: Boolean?, val url: String?, val handling: String?,
     val steg: Steg? = null, val forfalt: Boolean = false,
+    val bilde: String? = null,   // sti til profilbilde (hentes med token, se Bilder)
 )
 
 /** Gjeldende steg på et gjøremål; `ferdig`/`handling` på raden gjelder da dette steget. */
@@ -64,6 +65,7 @@ fun rader(data: JSONObject): List<Rad> {
                 Steg(st.optString("tekst"), st.optInt("nr"), st.optInt("antall"), st.optBoolean("gjort"))
             },
             forfalt = o.optBoolean("forfalt"),
+            bilde = o.str("bilde"),
         )
     }
 }

@@ -2,6 +2,7 @@ package no.haalandent.widget
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.graphics.Bitmap
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.Composable
@@ -10,6 +11,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.glance.GlanceId
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.action.ActionParameters
@@ -38,6 +41,7 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
@@ -71,7 +75,7 @@ class ListeWidget : GlanceAppWidget() {
             .setData(Uri.parse("widget://oppsett/$appWidgetId"))
         provideContent {
             GlanceTheme {
-                Innhold(currentState(), oppsett)
+                Innhold(context, currentState(), oppsett)
             }
         }
     }
@@ -81,7 +85,7 @@ fun visUrl(url: String) =
     actionStartActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
 
 @Composable
-private fun Innhold(p: Preferences, oppsett: Intent) {
+private fun Innhold(c: Context, p: Preferences, oppsett: Intent) {
     val tekstFarge = GlanceTheme.colors.onSurface
     val svak = GlanceTheme.colors.onSurfaceVariant
     Column(
@@ -127,31 +131,37 @@ private fun Innhold(p: Preferences, oppsett: Intent) {
 
         val naa = OffsetDateTime.now(ZoneId.systemDefault())
         val liste = rader(data).filter { synlig(it, naa) }
+        val modul = Lager.modul(c, p[N.modul])
         if (liste.isEmpty()) {
             Text("Ingen flere i dag", style = TextStyle(color = svak, fontSize = 13.sp))
             return@Column
         }
         LazyColumn {
             items(liste) { r ->
-                RadVisning(r, tekstFarge, svak)
+                RadVisning(r, tekstFarge, svak, Bilder.lokal(c, modul, r.bilde))
             }
         }
     }
 }
 
 @Composable
-private fun RadVisning(r: Rad, tekstFarge: ColorProvider, svak: ColorProvider) {
+private fun RadVisning(r: Rad, tekstFarge: ColorProvider, svak: ColorProvider, bilde: Bitmap?) {
     val ferdig = r.ferdig == true
     Row(
         modifier = GlanceModifier.fillMaxWidth().padding(vertical = 3.dp)
             .let { m -> if (r.url != null) m.clickable(visUrl(r.url)) else m },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = GlanceModifier.width(4.dp).height(32.dp).cornerRadius(2.dp)
-                .background(r.farge ?: Color.Gray)
-        ) {}
-        Spacer(GlanceModifier.width(8.dp))
+        if (bilde != null) {
+            Image(ImageProvider(bilde), contentDescription = null, modifier = GlanceModifier.size(28.dp))
+            Spacer(GlanceModifier.width(6.dp))
+        } else {
+            Box(
+                modifier = GlanceModifier.width(4.dp).height(32.dp).cornerRadius(2.dp)
+                    .background(r.farge ?: Color.Gray)
+            ) {}
+            Spacer(GlanceModifier.width(8.dp))
+        }
         val lokal = r.start?.atZoneSameInstant(ZoneId.systemDefault())
         Text(
             when {
