@@ -107,6 +107,15 @@ private fun KnappInnhold(p: Preferences, oppsett: Intent) {
         val url = data.str("url")
         val aapne = if (url != null) GlanceModifier.clickable(visUrl(url)) else GlanceModifier
 
+        // Tittel (skiller flere widgets av samme type) + ↻
+        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(data.optString("tittel"), modifier = aapne.defaultWeight(),
+                style = TextStyle(color = svak, fontSize = 11.sp), maxLines = 1)
+            Text(if (feil != null) "⚠ ↻" else "↻",
+                modifier = GlanceModifier.padding(start = 6.dp).clickable(actionRunCallback<Oppfrisk>()),
+                style = TextStyle(color = svak, fontSize = 14.sp))
+        }
+
         // Status
         val status = data.optJSONObject("status")
         Row(modifier = aapne.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -115,16 +124,13 @@ private fun KnappInnhold(p: Preferences, oppsett: Intent) {
                 Spacer(GlanceModifier.width(8.dp))
             }
             Column(modifier = GlanceModifier.defaultWeight()) {
-                Text(status?.str("tekst") ?: data.optString("tittel"),
+                Text(status?.str("tekst") ?: "",
                     style = TextStyle(color = tekst, fontSize = 18.sp, fontWeight = FontWeight.Bold),
                     maxLines = 1)
                 status?.str("undertekst")?.let {
                     Text(it, style = TextStyle(color = svak, fontSize = 13.sp), maxLines = 1)
                 }
             }
-            Text(if (feil != null) "⚠ ↻" else "↻",
-                modifier = GlanceModifier.padding(start = 6.dp).clickable(actionRunCallback<Oppfrisk>()),
-                style = TextStyle(color = svak, fontSize = 15.sp))
         }
 
         // Linjer og melding

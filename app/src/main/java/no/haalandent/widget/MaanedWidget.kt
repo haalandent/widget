@@ -108,6 +108,10 @@ private fun MaanedInnhold(c: Context, p: Preferences, appWidgetId: Int) {
                 style = TextStyle(color = tekstFarge, fontWeight = FontWeight.Bold, fontSize = 15.sp),
                 maxLines = 1,
             )
+            data?.str("tittel")?.let {
+                Text(it, modifier = GlanceModifier.padding(start = 6.dp),
+                    style = TextStyle(color = svak, fontSize = 11.sp), maxLines = 1)
+            }
             Text(
                 if (feil != null && data != null) "⚠ ↻" else "↻",
                 modifier = GlanceModifier.padding(start = 8.dp).clickable(actionRunCallback<Oppfrisk>()),
